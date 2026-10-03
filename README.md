@@ -8,7 +8,8 @@ HackYeah 2026, wyzwanie Superteam Poland „Finance Without Intermediaries”.
 |---|---|
 | Sieć | **devnet** (wyłącznie) |
 | Program ID | `AgSfAvkXWBugaYg768AAZdpUT3oNYkx7JQGmZTrUwHWK` |
-| Testowy mint USDC | _uzupełnić po `yarn demo:setup` na devnecie_ |
+| Testowy mint USDC (6 miejsc) | `6VLBMnVsHDDmg6a4tDqo9X4hMiCAZuuVDYJrivMVjvF9` |
+| IDL on-chain | `FmrWs3YPr5iab3MQZkkYWANoRH9Dj1rC2nWCYeHx5Avw` (Explorer dekoduje instrukcje) |
 | Explorer | https://explorer.solana.com/address/AgSfAvkXWBugaYg768AAZdpUT3oNYkx7JQGmZTrUwHWK?cluster=devnet |
 
 ## Pytania jury
@@ -131,6 +132,19 @@ Member.role:     0 backend, 1 frontend, 2 design, 3 qa, 4 other
 3. Mint USDC (z `.keys/demo.json`) → backend `PACTA_USDC_MINT`, konfiguracja frontendu.
 4. Fixture: `yarn demo:flow status` wypisuje komendy `solana account <PDA> --output json` dla projektu i milestone'u.
 
+### Fixture z devnetu (projekt demo po pełnym flow: `Completed`, milestone `Paid`, 400/350/250)
+
+```
+project   EmHoe2ujUZEyfXnoNWt9TZniptgjygVE2WSpHXqfi73e
+milestone CUNjDu8ZYsLQTYtyyAUuGz5Pyyw3LZL6txVq6yk2hNms
+vault     (PDA ["vault", project])
+
+solana account EmHoe2ujUZEyfXnoNWt9TZniptgjygVE2WSpHXqfi73e --output json -u devnet > project.json
+solana account CUNjDu8ZYsLQTYtyyAUuGz5Pyyw3LZL6txVq6yk2hNms --output json -u devnet > milestone.json
+```
+
+Transakcja z automatycznym podziałem: https://explorer.solana.com/tx/3Fami5ajaFCXM9CxoHNKLeGsfEK8ZbLoFrP8Ykos8TkmqVNq8C6iNgwppHnP42ygXZkkVgAmZSvosBrVuhtxQNEt?cluster=devnet
+
 ## Środowisko
 
 - Rust (rustup), Solana CLI Agave 2.3.0, Anchor 0.32.1 (`avm install 0.32.1 && avm use 0.32.1`), Node 20+, yarn.
@@ -141,9 +155,10 @@ yarn install
 anchor build
 anchor test                                   # lokalny walidator, 19 testów
 cargo test -p pacta                           # testy jednostkowe podziału
-solana config set --url devnet
-anchor deploy --provider.cluster devnet
+anchor deploy --provider.cluster "$PACTA_RPC_URL"   # URL z kluczem, np. Alchemy devnet
 ```
+
+**RPC.** URL z kluczem API trzymamy poza repo (zmienna środowiskowa), nie w `Anchor.toml`. Anchor przyjmuje go flagą `--provider.cluster <url>`, a skrypty zmienną `ANCHOR_PROVIDER_URL`. Alchemy nie obsługuje subskrypcji websocket (`signatureSubscribe`), dlatego skrypty potwierdzają transakcje pollingiem (`PollingConnection` w [`scripts/common.ts`](scripts/common.ts)). Frontend musi zrobić to samo albo ustawić `wsEndpoint` na RPC, które websockety wspiera. Airdrop (`requestAirdrop`) przez Alchemy devnet działa, publiczny faucet bywa zablokowany (429).
 
 ## Demo na devnecie
 
@@ -158,6 +173,8 @@ yarn demo:flow accept        # klient akceptuje -> 400 / 350 / 250 w jednej tran
 yarn demo:flow status        # salda, statusy, komendy fixture dla backendu
 ```
 
-Każdy krok wypisuje link do transakcji w Explorerze. Publiczne RPC devnetu odpowiada 429 przy wielu zapytaniach z jednego IP. Ustaw `ANCHOR_PROVIDER_URL` na RPC z Helius/QuickNode (darmowy plan).
+Każdy krok wypisuje link do transakcji w Explorerze. Publiczne RPC devnetu odpowiada 429 przy wielu zapytaniach z jednego IP, więc przed uruchomieniem ustaw `export ANCHOR_PROVIDER_URL="$PACTA_RPC_URL"`.
+
+Klient ma po pierwszym przebiegu 9 000 USDC, więc `create → accept` można powtórzyć na żywo wielokrotnie (każdy `create` tworzy nowy projekt z nowym seedem).
 
 `.keys/` jest w `.gitignore`. Nie commitujemy keypairów.

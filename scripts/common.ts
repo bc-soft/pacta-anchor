@@ -1,6 +1,18 @@
 import * as anchor from "@coral-xyz/anchor";
 import { BN, Program } from "@coral-xyz/anchor";
-import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
+import {
+  Commitment,
+  Connection,
+  Keypair,
+  LAMPORTS_PER_SOL,
+  PublicKey,
+  RpcResponseAndContext,
+  SignatureResult,
+  SystemProgram,
+  Transaction,
+  TransactionConfirmationStrategy,
+  TransactionExpiredBlockheightExceededError,
+} from "@solana/web3.js";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -27,6 +39,36 @@ export function rpcUrl(): string {
   return process.env.ANCHOR_PROVIDER_URL ?? "https://api.devnet.solana.com";
 }
 
+/**
+ * Connection that confirms transactions by polling instead of websocket subscriptions.
+ * Some RPC providers (e.g. Alchemy) do not support `signatureSubscribe`, which web3.js
+ * (and therefore Anchor and spl-token helpers) relies on by default.
+ */
+export class PollingConnection extends Connection {
+  async confirmTransaction(
+    strategy: TransactionConfirmationStrategy | string,
+    _commitment?: Commitment
+  ): Promise<RpcResponseAndContext<SignatureResult>> {
+    const signature = typeof strategy === "string" ? strategy : strategy.signature;
+    const lastValidBlockHeight =
+      typeof strategy !== "string" && "lastValidBlockHeight" in strategy ? strategy.lastValidBlockHeight : undefined;
+    for (;;) {
+      const { context, value } = await this.getSignatureStatuses([signature]);
+      const status = value[0];
+      if (status?.err) return { context, value: { err: status.err } };
+      if (status?.confirmationStatus === "confirmed" || status?.confirmationStatus === "finalized") {
+        return { context, value: { err: null } };
+      }
+      if (lastValidBlockHeight !== undefined && (await this.getBlockHeight()) > lastValidBlockHeight) {
+        throw new TransactionExpiredBlockheightExceededError(signature);
+      }
+      await sleep(500);
+    }
+  }
+}
+
+export const connect = () => new PollingConnection(rpcUrl(), "confirmed");
+
 export function loadKeypair(file: string): Keypair {
   return Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(file, "utf8"))));
 }
@@ -47,7 +89,7 @@ export function deployerKeypair(): Keypair {
 }
 
 export function getProgram(signer: Keypair): Program<Pacta> {
-  const connection = new Connection(rpcUrl(), "confirmed");
+  const connection = connect();
   const provider = new anchor.AnchorProvider(connection, new anchor.Wallet(signer), { commitment: "confirmed" });
   const idl = JSON.parse(fs.readFileSync(path.join(ROOT, "target/idl/pacta.json"), "utf8"));
   return new Program<Pacta>(idl, provider);

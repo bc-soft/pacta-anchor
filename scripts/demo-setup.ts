@@ -8,9 +8,9 @@
  * Usage: yarn demo:setup   (ANCHOR_PROVIDER_URL overrides the RPC, e.g. Helius)
  */
 import { createMint, getOrCreateAssociatedTokenAccount, mintTo } from "@solana/spl-token";
-import { Connection } from "@solana/web3.js";
 import * as fs from "fs";
 import {
+  connect,
   DECIMALS,
   deployerKeypair,
   DEMO_FILE,
@@ -35,7 +35,7 @@ const SOL_PER_ROLE: Record<string, number> = {
 };
 
 async function main() {
-  const connection = new Connection(rpcUrl(), "confirmed");
+  const connection = connect();
   const deployer = deployerKeypair();
   const programId = getProgram(deployer).programId;
   console.log(`RPC: ${rpcUrl()}\nProgram: ${programId.toBase58()}\nDeployer: ${deployer.publicKey.toBase58()}\n`);

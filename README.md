@@ -177,4 +177,19 @@ Każdy krok wypisuje link do transakcji w Explorerze. Publiczne RPC devnetu odpo
 
 Klient ma po pierwszym przebiegu 9 000 USDC, więc `create → accept` można powtórzyć na żywo wielokrotnie (każdy `create` tworzy nowy projekt z nowym seedem).
 
+### Portfele do testów w przeglądarce
+
+Każdy portfel, który podpisuje transakcje (klient, członek zespołu, arbiter), potrzebuje trochę SOL na opłaty. Klient potrzebuje też testowego USDC. Oba zasila deployer: płaci SOL i jako jedyny może dodrukować USDC.
+
+```bash
+yarn wallet new anna --usdc 1000      # .keys/anna.json + 0,1 SOL + 1 000 USDC, wypisuje klucz do importu w Phantomie
+yarn wallet new jan                   # członek zespołu albo arbiter: samo 0,1 SOL
+yarn wallet fund <adres> --usdc 500   # doładuj dowolny portfel, np. utworzony w Phantomie (SOL dobijane do 0,1)
+yarn wallet fund anna --sol 0.5       # zamiast adresu można podać nazwę z .keys/
+yarn wallet key client                # klucz istniejącego portfela z .keys/ do importu w Phantomie
+yarn wallet list                      # wszystkie portfele z .keys/ z saldami SOL i USDC
+```
+
+`--sol` dobija saldo do podanej kwoty (domyślnie 0,1), `--usdc` dodrukowuje podaną liczbę tokenów. Wypisany klucz wklejasz w Phantomie: Add / Connect Wallet → Import Private Key, sieć Devnet.
+
 `.keys/` jest w `.gitignore`. Nie commitujemy keypairów.

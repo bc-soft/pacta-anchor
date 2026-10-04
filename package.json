@@ -5,7 +5,8 @@
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
     "demo:setup": "ts-node --transpile-only scripts/demo-setup.ts",
     "demo:flow": "ts-node --transpile-only scripts/demo-flow.ts",
-    "typecheck": "tsc --noEmit -p ."
+    "typecheck": "tsc --noEmit -p .",
+    "wallet": "ts-node --transpile-only scripts/wallet.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1"
